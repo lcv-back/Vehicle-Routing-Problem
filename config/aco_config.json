@@ -13,5 +13,6 @@
   "service_hours": 0.5,
   "fixed_cost": 1000000.0,
   "transport_cost": 4492.0,
+  "output_dir": "results",
   "random_seed": 42
 }
