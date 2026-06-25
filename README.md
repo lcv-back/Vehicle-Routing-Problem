@@ -1,5 +1,23 @@
 # Apply Ant Colony Optimization Algorithm
 
+## Local quick start
+
+This repository now includes a local runner that does not require Google Colab
+or Google Drive paths. It loads `data.xlsx` and `distance-matrix.xlsx`,
+validates the customer names, and prints a nearest-neighbor VRP baseline using
+the same default capacity and cost values used in the notebooks.
+
+```bash
+pip install -r requirements.txt
+python run_vrp.py
+```
+
+Useful options:
+
+```bash
+python run_vrp.py --vehicle-capacity 2000 --max-duration 48 --speed 50
+```
+
 <details>
   <summary>Click để xem Tiếng Việt</summary>
 
