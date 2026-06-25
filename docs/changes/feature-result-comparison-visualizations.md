@@ -64,6 +64,24 @@ results/aco_convergence_charts.png
 If `matplotlib` is not installed, the notebook prints a clear install message
 and still produces the CSV result tables.
 
+### Optional Route Map
+
+The notebook now checks whether the dataset contains numeric latitude and
+longitude columns. If usable coordinates exist, it writes:
+
+```text
+results/optimized_route_map.html
+```
+
+If coordinates are not usable, it writes:
+
+```text
+results/route_map_status.txt
+```
+
+The current dataset uses address text in `Coordinates Valid`, so the route map
+is skipped safely instead of guessing inaccurate coordinates.
+
 ## Configuration
 
 The output directory is configured in:
