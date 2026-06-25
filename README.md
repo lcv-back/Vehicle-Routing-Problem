@@ -1,14 +1,77 @@
-# Apply Ant Colony Optimization Algorithm
+# Vehicle Routing Problem with Ant Colony Optimization
 
-## Local quick start
+This project studies the Vehicle Routing Problem (VRP) for logistics route
+planning and applies Ant Colony Optimization (ACO) to reduce delivery distance,
+transportation cost, and manual planning effort.
 
-This repository now includes a local runner that does not require Google Colab
-or Google Drive paths. It loads `data.xlsx` and `distance-matrix.xlsx`,
-validates the customer names, and prints a nearest-neighbor VRP baseline using
-the same default capacity and cost values used in the notebooks.
+## Problem Overview
+
+Route planning is an important logistics problem because transportation cost,
+delivery time, and vehicle utilization all depend on the quality of the route.
+In this project, the target problem is to assign customers to delivery routes
+while respecting operational constraints such as vehicle capacity and travel
+duration.
+
+The original workflow was developed in notebooks. The repository now also
+includes a local runner so the data can be validated and a baseline result can
+be produced without Google Colab or Google Drive paths.
+
+## Dataset Description
+
+The project uses two Excel files:
+
+- `data.xlsx`: customer information, including customer name, province,
+  capacity demand, and valid coordinate/address text.
+- `distance-matrix.xlsx`: distance matrix between the depot (`Kho`) and
+  customers.
+
+Important columns in `data.xlsx`:
+
+- `Customer_Name`: customer name used to match the distance matrix.
+- `Capacity`: customer demand.
+- `Coordinates Valid`: cleaned location text used by the original notebooks.
+
+The local runner checks that every customer in `data.xlsx` exists as both a row
+and a column in `distance-matrix.xlsx`.
+
+## Algorithm
+
+The main research direction is Ant Colony Optimization (ACO).
+
+ACO is a metaheuristic inspired by how ant colonies find short paths. Each
+artificial ant builds a candidate route by selecting the next customer based on
+two signals:
+
+- pheromone value, which represents learned route quality from previous
+  iterations;
+- heuristic value, usually based on distance, where shorter paths are preferred.
+
+After each iteration, pheromone values are updated so better routes become more
+likely to be selected in later iterations.
+
+The repository also includes a reproducible nearest-neighbor baseline in
+`run_vrp.py`. This baseline always chooses the nearest feasible next customer
+while respecting:
+
+- vehicle capacity;
+- maximum route duration;
+- average vehicle speed;
+- service time per customer.
+
+This baseline is useful as a simple comparison point before evaluating the full
+ACO implementation.
+
+## How To Run
+
+Install dependencies:
 
 ```bash
 pip install -r requirements.txt
+```
+
+Run the local baseline:
+
+```bash
 python run_vrp.py
 ```
 
@@ -18,65 +81,47 @@ Useful options:
 python run_vrp.py --vehicle-capacity 2000 --max-duration 48 --speed 50
 ```
 
-<details>
-  <summary>Click để xem Tiếng Việt</summary>
+Default values are aligned with the notebook experiment:
 
-## 1. Giới Thiệu
+- vehicle capacity: `2000`
+- max route duration: `48` hours
+- speed: `50` km/h
+- service time: `0.5` hours per customer
+- fixed cost: `1000000`
+- transport cost: `4492`
 
-- **Vấn đề chính**: Trong lĩnh vực logistics, việc tối ưu hóa tuyến đường vận chuyển hàng hóa đóng vai trò quan trọng trong việc giảm chi phí và tăng hiệu quả hoạt động của doanh nghiệp. Công ty Vissan hiện đang đối mặt với việc hoạch định tuyến đường giao hàng thủ công, gây ra chi phí cao và hiệu quả không tối ưu. Vì vậy, cần tìm kiếm các giải pháp mới để tối ưu hóa tuyến đường giao hàng và giảm chi phí vận chuyển.
-- **Mục tiêu**: Sử dụng thuật toán Ant Colony Optimization (ACO) để giải quyết bài toán hoạch định tuyến xe (Vehicle Routing Problem - VRP). Mục tiêu là giảm thiểu tổng chi phí vận chuyển, tối ưu hóa thời gian giao hàng và sử dụng hiệu quả các phương tiện vận chuyển.
+## Results
 
-## 2. Cơ Sở Lý Thuyết
+Current local baseline result:
 
-- **Bài toán VRP (Vehicle Routing Problem)**: Đây là bài toán tối ưu hóa nhằm tìm kiếm lộ trình vận chuyển tối ưu cho một hoặc nhiều phương tiện, sao cho các phương tiện này phục vụ tất cả các khách hàng trong một phạm vi xác định với chi phí vận chuyển thấp nhất. VRP là một bài toán phức tạp và có thể có nhiều biến thể như VRP với đội xe không đồng nhất, VRP định kỳ, và VRP với ràng buộc về thời gian.
-- **Thuật toán đàn kiến (ACO)**: ACO là một thuật toán tối ưu hóa metaheuristic được lấy cảm hứng từ hành vi tìm kiếm thức ăn của đàn kiến trong tự nhiên. Thuật toán này sử dụng các con kiến nhân tạo để tìm kiếm lộ trình tối ưu bằng cách để lại "pheromone" trên các con đường mà chúng đi qua. Các con kiến khác sẽ có xu hướng chọn các con đường có nồng độ pheromone cao, từ đó tối ưu hóa lộ trình dần dần qua các vòng lặp.
+- number of routes: `30`
+- total distance: `11,209.79 km`
+- total cost: `80,354,377`
 
-## 3. Phương Pháp
+These numbers are produced by the nearest-neighbor baseline, not the final ACO
+optimizer. They provide a stable reference result for future comparison.
 
-- **Phân tích thực trạng**: Để xác định những yếu tố gây ra chi phí vận chuyển cao, cần phải phân tích quy trình vận chuyển hiện tại của công ty. Công ty Vissan sử dụng phương pháp thủ công để lập kế hoạch lộ trình vận chuyển, điều này dẫn đến việc không tối ưu hóa được quãng đường đi và thời gian giao hàng.
-- **Xây dựng mô hình**: Dựa trên các yếu tố như quãng đường, thời gian và chi phí, mô hình toán học sẽ được xây dựng để mô phỏng bài toán VRP. Các ràng buộc như tải trọng xe, thời gian phục vụ khách hàng và thời gian di chuyển giữa các địa điểm sẽ được đưa vào mô hình.
-- **Kiểm chứng giải thuật**: Sau khi mô hình được xây dựng, thuật toán ACO sẽ được áp dụng để tìm kiếm lộ trình tối ưu. Bộ dữ liệu thực tế của công ty sẽ được sử dụng để kiểm chứng hiệu quả của giải thuật trong việc tối ưu hóa lộ trình và giảm chi phí vận chuyển.
+## Improvement Roadmap
 
-## 4. Ứng Dụng Thuật Toán ACO
+1. Move core ACO logic from notebooks into Python modules.
+2. Use the precomputed distance matrix everywhere instead of repeated lookup
+   logic.
+3. Add validation that each customer is visited exactly once.
+4. Add route constraint checks for capacity and duration.
+5. Compare greedy baseline, nearest-neighbor baseline, and ACO results.
+6. Add runtime benchmarking and convergence charts.
+7. Export final route summaries to CSV or Excel.
+8. Clean and modularize the optimized notebook so it matches the full original
+   workflow.
 
-- **Quy trình hoạt động**: Thuật toán ACO mô phỏng hành vi của đàn kiến tự nhiên. Mỗi con kiến sẽ bắt đầu từ một điểm xuất phát ngẫu nhiên và chọn các tuyến đường để đi đến các điểm tiếp theo dựa trên xác suất, được tính toán dựa trên pheromone và thông tin về độ dài các tuyến đường. Sau khi tất cả các con kiến hoàn thành hành trình, pheromone trên các tuyến đường sẽ được cập nhật để củng cố các lựa chọn tốt nhất.
-- **Cập nhật pheromone**: Pheromone trên các tuyến đường được điều chỉnh sau mỗi vòng lặp của thuật toán, giúp các con kiến lựa chọn các tuyến đường tối ưu hơn trong các lần chạy tiếp theo. Các tuyến đường ngắn và hiệu quả sẽ có lượng pheromone cao hơn, do đó các con kiến khác sẽ có xu hướng chọn những tuyến đường này.
-- **Tính hiệu quả**: Thuật toán ACO sẽ được thực hiện qua nhiều vòng lặp để đảm bảo kết quả tối ưu. Qua mỗi vòng, chất lượng của các lộ trình sẽ được cải thiện dần dần. Thuật toán ACO đã chứng minh được khả năng tối ưu hóa trong các bài toán như VRP, đặc biệt là khi đối mặt với các dữ liệu phức tạp.
+## Vietnamese Summary
 
-## 5. Kết Luận
+Dự án này giải quyết bài toán hoạch định tuyến xe (Vehicle Routing Problem -
+VRP) trong logistics. Mục tiêu là tìm các tuyến giao hàng có tổng quãng đường
+và chi phí thấp hơn, đồng thời vẫn thỏa mãn các ràng buộc như tải trọng xe và
+thời gian giao hàng.
 
-- **Hiệu quả**: Thuật toán ACO đã chứng minh tính hiệu quả trong việc giảm chi phí vận chuyển và tối ưu hóa thời gian giao hàng. Việc ứng dụng ACO vào bài toán VRP sẽ giúp công ty Vissan cải thiện đáng kể hiệu quả hoạt động của đội xe, giảm chi phí nhiên liệu và nâng cao khả năng phục vụ khách hàng.
-- **Hướng triển khai**: Sau khi kiểm chứng giải thuật, công ty có thể triển khai giải pháp tối ưu hóa tuyến đường vận chuyển vào thực tế. Hướng nghiên cứu tiếp theo có thể mở rộng ứng dụng thuật toán ACO cho các bài toán tối ưu hóa khác trong logistics hoặc sản xuất.
-
-</details>
-
-<details open>
-  <summary>Click để xem English</summary>
-
-## 1. Introduction
-
-- **Main issue**: In logistics, optimizing transportation routes plays a crucial role in reducing costs and increasing operational efficiency. Vissan company is currently facing the issue of manual route planning, which leads to high costs and suboptimal results. Therefore, new solutions are needed to optimize the delivery routes and reduce transportation costs.
-- **Goal**: To use the Ant Colony Optimization (ACO) algorithm to solve the Vehicle Routing Problem (VRP). The goal is to minimize total transportation costs, optimize delivery times, and make efficient use of transportation vehicles.
-
-## 2. Theoretical Background
-
-- **VRP (Vehicle Routing Problem)**: This optimization problem aims to find the optimal transportation route for one or more vehicles, such that these vehicles serve all customers within a specified area with the lowest transportation cost. VRP is a complex problem with several variants, such as VRP with heterogeneous fleets, periodic VRP, and VRP with time constraints.
-- **Ant Colony Optimization (ACO)**: ACO is a metaheuristic optimization algorithm inspired by the food-searching behavior of natural ant colonies. This algorithm uses artificial ants to find optimal paths by leaving pheromone trails on the paths they take. Other ants are more likely to choose paths with higher pheromone concentrations, thereby optimizing the route gradually through iterations.
-
-## 3. Methodology
-
-- **Analysis of the current situation**: To identify factors that contribute to high transportation costs, the current process of transportation planning at Vissan must be analyzed. Vissan currently uses a manual method for route planning, which prevents optimal path finding and efficient time management.
-- **Model building**: Based on factors like distance, time, and cost, a mathematical model will be developed to simulate the VRP. Constraints such as vehicle capacity, customer service times, and travel time between locations will be included in the model.
-- **Algorithm validation**: Once the model is built, the ACO algorithm will be applied to find the optimal route. Real company data will be used to validate the algorithm’s effectiveness in optimizing routes and reducing transportation costs.
-
-## 4. ACO Algorithm Application
-
-- **Operation process**: The ACO algorithm simulates the behavior of natural ant colonies. Each ant starts from a random point and chooses routes to reach the next points based on probabilities, which are calculated from pheromone and information about the path lengths. After all ants complete their paths, pheromones on the routes will be updated to reinforce the best choices.
-- **Pheromone update**: Pheromones on the routes are adjusted after each iteration of the algorithm, helping ants choose optimal paths in subsequent runs. Shorter and more efficient routes will have higher pheromone concentrations, so other ants will be more likely to choose those routes.
-- **Efficiency**: The ACO algorithm will be executed through multiple iterations to ensure the optimal result. With each iteration, the quality of the routes will gradually improve. ACO has proven to be effective in optimizing VRP problems, especially when dealing with complex data.
-
-## 5. Conclusion
-
-- **Effectiveness**: The ACO algorithm has proven effective in reducing transportation costs and optimizing delivery times. Applying ACO to the VRP will significantly improve the operational efficiency of Vissan’s fleet, reduce fuel costs, and enhance customer service capabilities.
-- **Implementation**: After validating the algorithm, the company can implement the optimized transportation route solution in practice. Future research could extend the application of ACO to other optimization problems in logistics or production.
-</details>
+Dữ liệu chính gồm `data.xlsx` và `distance-matrix.xlsx`. File `run_vrp.py` cho
+phép chạy thử nghiệm trực tiếp trên máy, không cần Google Colab. Kết quả hiện
+tại là tuyến cơ sở nearest-neighbor để dùng làm mốc so sánh khi tiếp tục tối ưu
+thuật toán ACO.
