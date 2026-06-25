@@ -1,51 +1,61 @@
-# Tối ưu hiệu năng thuật toán
+# Algorithm Performance Optimization
 
-Tài liệu này ghi lại các hướng cải tiến hiệu năng cho bài toán Vehicle Routing
-Problem (VRP) sử dụng Ant Colony Optimization (ACO). Nội dung cũ bị lỗi mã hóa
-tiếng Việt, nên tài liệu đã được viết lại bằng UTF-8 sạch.
+This document describes performance improvements for the Vehicle Routing
+Problem (VRP) workflow using Ant Colony Optimization (ACO). The previous
+version contained corrupted Vietnamese text, so it has been rewritten in clean
+UTF-8 English.
 
-## 1. Phân tích bài toán
+## 1. Problem Analysis
 
-Các phần xử lý chính trong chương trình gồm:
+The main processing steps are:
 
-- khởi tạo và cập nhật ma trận pheromone;
-- tính tổng quãng đường của từng tuyến;
-- kiểm tra ràng buộc tải trọng xe;
-- kiểm tra ràng buộc thời gian giao hàng;
-- chia khách hàng thành các tuyến xe;
-- tính tổng chi phí vận chuyển;
-- trực quan hóa chi phí và quãng đường theo từng vòng lặp.
+- initialize and update the pheromone matrix;
+- calculate total route distance;
+- validate vehicle capacity constraints;
+- validate route duration constraints;
+- split customers into vehicle routes;
+- calculate total transportation cost;
+- visualize cost and distance by loop.
 
-Các điểm dễ gây chậm là vòng lặp lồng nhau, truy xuất `DataFrame` nhiều lần, và
-tính lại khoảng cách giữa cùng một cặp điểm.
+The main performance risks are nested Python loops, repeated `DataFrame`
+lookups, and recalculating or re-fetching the same pairwise distances many
+times.
 
-## 2. Dùng ma trận khoảng cách đã tính sẵn
+## 2. Use The Precomputed Distance Matrix
 
-Trong notebook gốc, nhiều hàm gọi lại logic tra cứu khoảng cách như
-`calcDistAuto`. Cách này dễ chậm khi số khách hàng tăng.
+The original notebook repeatedly calls helper logic such as `calcDistAuto` to
+look up distances. That pattern becomes slow as the number of customers grows.
 
-Nên chuyển `distance-matrix.xlsx` thành một ma trận số ngay từ đầu:
+The distance workbook should be converted once:
 
 ```python
-distance_matrix = df_distance.set_index("TÊN KHÁCH HÀNG").astype(float)
+name_column = df_distance.columns[0]
+distance_matrix = df_distance.set_index(name_column).astype(float)
 ```
 
-Sau đó truy xuất khoảng cách bằng chỉ số:
+Then distance lookups can use direct indexing:
 
 ```python
 distance = distance_matrix.loc[from_customer, to_customer]
 ```
 
-Lợi ích:
+For the optimized notebook, this is converted further into a NumPy matrix:
 
-- tránh tính hoặc tra cứu lặp lại;
-- giúp hàm tính tổng quãng đường ngắn gọn hơn;
-- dễ kiểm tra dữ liệu đầu vào;
-- thuận tiện để tối ưu bằng NumPy về sau.
+```python
+distance_matrix = distance_df.to_numpy(dtype=float)
+distance = distance_matrix[i, j]
+```
 
-## 3. Tối ưu khởi tạo ma trận pheromone
+Benefits:
 
-Phiên bản dùng vòng lặp:
+- avoids repeated lookup logic;
+- simplifies route distance calculations;
+- makes input validation easier;
+- enables faster NumPy-based calculations.
+
+## 3. Optimize Pheromone Matrix Initialization
+
+Loop-based version:
 
 ```python
 def default_odor_matrix(value, n):
@@ -58,7 +68,7 @@ def default_odor_matrix(value, n):
     return odor_matrix
 ```
 
-Phiên bản nên dùng:
+Recommended version:
 
 ```python
 def default_odor_matrix(value, n):
@@ -67,15 +77,15 @@ def default_odor_matrix(value, n):
     return pd.DataFrame(odor_matrix)
 ```
 
-Lợi ích:
+Benefits:
 
-- ít dòng code hơn;
-- giảm vòng lặp Python;
-- tận dụng xử lý vector hóa của NumPy.
+- less code;
+- fewer Python-level loops;
+- uses NumPy vectorized operations.
 
-## 4. Tối ưu tính tổng quãng đường
+## 4. Optimize Total Distance Calculation
 
-Phiên bản nên dùng ma trận khoảng cách:
+Use the distance matrix directly:
 
 ```python
 def total_distance(route, distance_matrix):
@@ -85,32 +95,32 @@ def total_distance(route, distance_matrix):
     return round(distance, 2)
 ```
 
-Nếu tuyến cần quay về kho, nên cộng rõ ràng đoạn từ khách cuối về `Kho`:
+If a route must return to the depot, add that leg explicitly:
 
 ```python
 distance += distance_matrix.loc[route[-1], "Kho"]
 ```
 
-Điểm quan trọng là phải thống nhất một quy ước:
+The key is to keep one consistent convention:
 
-- route có bao gồm kho ở đầu/cuối hay không;
-- tổng quãng đường có cộng chiều về kho hay không.
+- whether the route includes the depot at the start and end;
+- whether the return-to-depot leg is included in total distance.
 
-## 5. Tối ưu cập nhật pheromone
+## 5. Optimize Pheromone Evaporation
 
-Hàm bay hơi pheromone có thể viết ngắn gọn:
+Pheromone evaporation can be written as:
 
 ```python
 def evaporate_pheromone(odor_matrix, evaporation_rate=0.1):
     return odor_matrix * (1 - evaporation_rate)
 ```
 
-Nên truyền `evaporation_rate` từ cấu hình thay vì hard-code trong thân hàm.
-Điều này giúp dễ thử nghiệm nhiều bộ tham số khác nhau.
+`evaporation_rate` should come from configuration instead of being hard-coded
+inside the function. This makes experiments easier to reproduce.
 
-## 6. Tối ưu tạo danh sách cạnh cần cập nhật
+## 6. Optimize Edge Updates
 
-Thay vì tạo từng cặp cạnh bằng nhiều thao tác thủ công, có thể dùng NumPy:
+Instead of manually creating each edge pair, use NumPy:
 
 ```python
 def determine_add_edges(route):
@@ -120,11 +130,11 @@ def determine_add_edges(route):
     return np.vstack((edges, reverse_edges))
 ```
 
-Cách này phù hợp khi cần cập nhật pheromone cho cả hai chiều của tuyến.
+This is useful when pheromone should be updated in both travel directions.
 
-## 7. Cải thiện chia tuyến theo tải trọng
+## 7. Improve Capacity-Based Route Splitting
 
-Hàm chia tuyến nên kiểm tra dữ liệu trước khi xử lý:
+Route splitting should validate data before assigning customers:
 
 ```python
 def split_by_capacity(route, max_capacity, demand_by_node):
@@ -151,35 +161,36 @@ def split_by_capacity(route, max_capacity, demand_by_node):
     return routes
 ```
 
-Lợi ích:
+Benefits:
 
-- phát hiện khách hàng vượt tải trọng ngay từ đầu;
-- tránh sinh tuyến không hợp lệ;
-- dễ viết kiểm thử tự động.
+- detects impossible customers early;
+- avoids invalid generated routes;
+- makes automated testing easier.
 
-## 8. Cấu hình tham số thuật toán
+## 8. Make Algorithm Parameters Configurable
 
-Các giá trị sau nên được đưa vào cấu hình hoặc CLI arguments:
+The following values should be configurable through a notebook config block or
+CLI arguments:
 
-- số vòng lặp;
-- số lượng ant;
+- number of loops;
+- number of ants;
 - `alpha`;
 - `beta`;
-- tỷ lệ bay hơi pheromone;
-- tải trọng xe;
-- thời gian tối đa;
-- tốc độ xe;
-- chi phí cố định;
-- chi phí vận chuyển trên mỗi km.
+- pheromone evaporation rate;
+- vehicle capacity;
+- maximum route duration;
+- vehicle speed;
+- fixed cost;
+- transportation cost per kilometer.
 
-Điều này giúp tái lập kết quả và so sánh nhiều kịch bản tối ưu.
+This improves reproducibility and makes scenario comparison easier.
 
-## 9. Đề xuất bước tiếp theo
+## 9. Recommended Next Steps
 
-1. Tách code ACO từ notebook sang module Python.
-2. Dùng `distance-matrix.xlsx` làm nguồn khoảng cách duy nhất.
-3. Thêm kiểm tra mỗi khách hàng được ghé đúng một lần.
-4. Thêm kiểm tra tải trọng và thời gian cho từng tuyến.
-5. So sánh kết quả giữa greedy, nearest-neighbor baseline và ACO.
-6. Ghi kết quả ra CSV hoặc Excel.
-7. Thêm biểu đồ hội tụ chi phí theo vòng lặp.
+1. Move ACO logic from notebooks into Python modules.
+2. Use `distance-matrix.xlsx` as the only distance source.
+3. Validate that each customer is visited exactly once.
+4. Validate capacity and duration for every route.
+5. Compare greedy, nearest-neighbor baseline, and ACO results.
+6. Export final results to CSV or Excel.
+7. Add convergence charts for cost and distance by loop.

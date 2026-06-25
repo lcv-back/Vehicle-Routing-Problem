@@ -1,37 +1,38 @@
 # Branch: feature/complete-optimized-notebook
 
-## Mục tiêu
+## Goal
 
-Branch này xử lý nhóm cải tiến tiếp theo cho notebook tối ưu:
+This branch implements the next optimization proposal:
 
-- hoàn thiện `optimized-data-processing.ipynb`;
-- dùng ma trận khoảng cách NumPy trong thuật toán;
-- đưa tham số ACO vào một khu vực cấu hình;
-- thêm kiểm tra tính đúng đắn của tuyến;
-- thêm bảng so sánh kết quả;
-- thêm phần trực quan hóa kết quả.
+- complete `optimized-data-processing.ipynb`;
+- use a NumPy distance matrix throughout the optimized algorithm;
+- move ACO parameters into one configuration block;
+- add route correctness validation;
+- add result comparison;
+- add visualization cells.
 
-## Vấn đề trước khi sửa
+## Problem Before The Change
 
-Notebook `optimized-data-processing.ipynb` trước đó chỉ tối ưu một số hàm nhỏ
-như khởi tạo pheromone hoặc tính khoảng cách, nhưng thiếu các phần downstream
-quan trọng:
+The previous `optimized-data-processing.ipynb` improved a few isolated helper
+functions, such as pheromone initialization and distance calculation, but it
+did not include the downstream workflow needed for full comparison:
 
-- chia tuyến theo tải trọng;
-- tính tổng chi phí;
-- chạy vòng lặp ACO đầy đủ;
-- kiểm tra khách hàng đã được giao đúng một lần;
-- so sánh greedy, original ACO và optimized ACO;
-- biểu đồ cost/distance/convergence.
+- route splitting by vehicle capacity;
+- total cost calculation;
+- full ACO loop evaluation;
+- validation that each customer is visited exactly once;
+- comparison between greedy, original-style ACO, and optimized ACO;
+- cost, distance, and convergence charts.
 
-Ngoài ra, code cũ vẫn còn xu hướng tra cứu khoảng cách bằng `DataFrame` hoặc
-hàm trung gian nhiều lần. Đây là điểm chậm lớn khi số khách hàng tăng.
+The previous approach also still relied on repeated `DataFrame` lookups or
+intermediate helper calls for distance access. That is one of the largest
+performance bottlenecks when the customer count grows.
 
-## Thay đổi đã thực hiện
+## Changes Applied
 
-### 1. Viết lại notebook thành workflow đầy đủ
+### 1. Rebuilt The Notebook As A Complete Workflow
 
-Notebook mới gồm các phần:
+The notebook now includes:
 
 - Configuration
 - Load dataset and build NumPy distance matrix
@@ -44,25 +45,25 @@ Notebook mới gồm các phần:
 - Visualizations
 - Notes for future route map
 
-### 2. Dùng NumPy distance matrix
+### 2. Added NumPy Distance Matrix Usage
 
-`distance-matrix.xlsx` được đọc một lần, sau đó chuyển thành:
+`distance-matrix.xlsx` is read once and converted into:
 
 ```python
 distance_matrix = distance_df.to_numpy(dtype=float)
 ```
 
-Trong thuật toán tối ưu, khoảng cách được truy xuất trực tiếp bằng:
+The optimized algorithm accesses distances directly:
 
 ```python
 distance_matrix[i, j]
 ```
 
-Cách này nhanh hơn nhiều so với tra cứu `DataFrame.loc` lặp lại.
+This is much faster than repeated `DataFrame.loc` lookups.
 
-### 3. Thêm config cho ACO
+### 3. Added ACO Configuration
 
-Các tham số được gom vào `CONFIG`:
+The following parameters are now grouped in `CONFIG`:
 
 - `number_of_ants`
 - `number_of_loops`
@@ -77,30 +78,31 @@ Các tham số được gom vào `CONFIG`:
 - `transport_cost`
 - `random_seed`
 
-Điều này giúp thử nghiệm lại dễ hơn và tránh hard-code rải rác trong notebook.
+This makes experiments easier to reproduce and avoids scattered hard-coded
+values.
 
-### 4. Thêm validation
+### 4. Added Validation
 
-Notebook mới kiểm tra:
+The notebook now checks that:
 
-- mỗi khách hàng được ghé đúng một lần;
-- không có khách hàng bị thiếu;
-- không có khách hàng bị lặp;
-- mỗi route bắt đầu và kết thúc tại depot `Kho`;
-- không route nào vượt tải trọng xe;
-- không route nào vượt thời gian tối đa.
+- every customer is visited exactly once;
+- no customer is missing;
+- no customer is duplicated;
+- every route starts and ends at the depot `Kho`;
+- no route exceeds vehicle capacity;
+- no route exceeds maximum duration.
 
-### 5. Thêm so sánh kết quả
+### 5. Added Result Comparison
 
-Notebook tạo bảng `comparison_df` gồm:
+The notebook creates `comparison_df` with:
 
-- tổng quãng đường;
-- tổng chi phí;
-- số route/vehicle;
+- total distance;
+- total cost;
+- number of routes/vehicles;
 - runtime;
-- phần trăm cải thiện so với greedy baseline.
+- improvement percentage versus the greedy baseline.
 
-Kết quả kiểm tra hiện tại:
+Current verification result:
 
 | Method | Total distance | Total cost | Routes | Runtime | Improvement |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -108,31 +110,32 @@ Kết quả kiểm tra hiện tại:
 | original_style_aco | 9,775.28 | 71,910,557.76 | 28 | 81.44s | 10.51% |
 | optimized_aco | 9,712.64 | 71,629,178.88 | 28 | 3.31s | 10.86% |
 
-### 6. Thêm visualizations
+### 6. Added Visualizations
 
-Notebook có cell vẽ:
+The notebook includes charts for:
 
 - cost per loop;
 - distance per loop;
-- convergence chart;
+- convergence;
 - route distance by route.
 
-Nếu môi trường chưa cài `matplotlib`, notebook sẽ in hướng dẫn:
+If `matplotlib` is not installed, the notebook prints:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Kết quả sau khi sửa
+## Result
 
-Notebook đã chạy end-to-end thành công trong phần thuật toán và validation.
+The notebook runs end-to-end for loading data, building routes, validating
+solutions, and generating the comparison table.
 
-Trong môi trường hiện tại, `matplotlib` chưa được cài nên phần biểu đồ không
-render trực tiếp, nhưng cell visualization đã có fallback rõ ràng và sẽ chạy
-khi dependencies được cài bằng `requirements.txt`.
+In the current environment, `matplotlib` is not installed, so charts do not
+render during verification. The visualization cell includes a clear fallback
+message and will render once dependencies are installed from `requirements.txt`.
 
-## Ghi chú
+## Notes
 
-Branch này tập trung vào notebook tối ưu. Chưa thêm route map vì dữ liệu hiện
-tại trong `Coordinates Valid` là địa chỉ text, chưa phải tọa độ latitude /
-longitude ổn định.
+This branch focuses on completing the optimized notebook. A route map was not
+added because `Coordinates Valid` currently contains address text rather than
+stable latitude/longitude coordinates.
