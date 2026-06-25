@@ -113,15 +113,3 @@ optimizer. They provide a stable reference result for future comparison.
 7. Export final route summaries to CSV or Excel.
 8. Clean and modularize the optimized notebook so it matches the full original
    workflow.
-
-## Vietnamese Summary
-
-Dự án này giải quyết bài toán hoạch định tuyến xe (Vehicle Routing Problem -
-VRP) trong logistics. Mục tiêu là tìm các tuyến giao hàng có tổng quãng đường
-và chi phí thấp hơn, đồng thời vẫn thỏa mãn các ràng buộc như tải trọng xe và
-thời gian giao hàng.
-
-Dữ liệu chính gồm `data.xlsx` và `distance-matrix.xlsx`. File `run_vrp.py` cho
-phép chạy thử nghiệm trực tiếp trên máy, không cần Google Colab. Kết quả hiện
-tại là tuyến cơ sở nearest-neighbor để dùng làm mốc so sánh khi tiếp tục tối ưu
-thuật toán ACO.
