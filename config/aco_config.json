@@ -1,0 +1,17 @@
+{
+  "data_path": "data.xlsx",
+  "distance_path": "distance-matrix.xlsx",
+  "depot_name": "Kho",
+  "number_of_ants": 20,
+  "number_of_loops": 50,
+  "alpha": 1.0,
+  "beta": 2.0,
+  "evaporation_rate": 0.1,
+  "vehicle_capacity": 2000.0,
+  "max_duration": 48.0,
+  "speed": 50.0,
+  "service_hours": 0.5,
+  "fixed_cost": 1000000.0,
+  "transport_cost": 4492.0,
+  "random_seed": 42
+}
