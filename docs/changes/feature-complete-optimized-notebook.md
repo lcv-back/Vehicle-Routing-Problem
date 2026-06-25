@@ -30,6 +30,19 @@ performance bottlenecks when the customer count grows.
 
 ## Changes Applied
 
+## File-By-File Coverage
+
+| File | Requested item covered |
+| --- | --- |
+| `optimized-data-processing.ipynb` | Completes the optimized notebook workflow with route building, route splitting by constraints, cost calculation, loop evaluation, validation, comparison, and visualization cells. |
+| `optimized-data-processing.ipynb` | Converts `distance-matrix.xlsx` into a NumPy matrix once and uses direct `distance_matrix[i, j]` access in the optimized ACO path. |
+| `optimized-data-processing.ipynb` | Adds a `CONFIG` block for number of ants, number of loops, `alpha`, `beta`, evaporation rate, vehicle capacity, max duration, speed, fixed cost, transport cost, service time, and random seed. |
+| `config/aco_config.json` | Stores the default ACO configuration outside the notebook so behavior can be changed without editing algorithm cells. |
+| `optimized-data-processing.ipynb` | Adds validation for customer coverage, duplicate visits, route capacity, route duration, and consistent depot start/end handling. |
+| `optimized-data-processing.ipynb` | Adds `comparison_df` to compare greedy baseline, original-style ACO, and optimized ACO by distance, cost, route count, runtime, and improvement percentage. |
+| `optimized-data-processing.ipynb` | Adds cost-per-loop, distance-per-loop, convergence, and route-distance visualizations. |
+| `docs/changes/feature-complete-optimized-notebook.md` | Documents this branch, the requested changes, verification result, and why route map support is deferred. |
+
 ### 1. Rebuilt The Notebook As A Complete Workflow
 
 The notebook now includes:
@@ -63,7 +76,8 @@ This is much faster than repeated `DataFrame.loc` lookups.
 
 ### 3. Added ACO Configuration
 
-The following parameters are now grouped in `CONFIG`:
+The following parameters are now loaded from `config/aco_config.json` and
+exposed through `CONFIG`:
 
 - `number_of_ants`
 - `number_of_loops`
