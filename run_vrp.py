@@ -9,6 +9,7 @@ constraints.
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -16,6 +17,7 @@ import pandas as pd
 
 
 DEPOT_NAME = "Kho"
+DISTANCE_TOLERANCE = 1e-9
 
 
 @dataclass(frozen=True)
@@ -180,6 +182,61 @@ def build_nearest_neighbor_routes(
     return routes
 
 
+def validate_routes(
+    routes: list[Route],
+    customers: list[Customer],
+    distances: pd.DataFrame,
+    vehicle_capacity: float,
+    max_duration: float,
+    fixed_cost: float,
+    transport_cost: float,
+) -> None:
+    if not routes:
+        raise ValueError("At least one route is required.")
+
+    expected_customers = {customer.name for customer in customers}
+    visited_customers = [
+        customer_name for route in routes for customer_name in route.customers
+    ]
+    visit_counts = Counter(visited_customers)
+
+    duplicates = sorted(name for name, count in visit_counts.items() if count > 1)
+    missing = sorted(expected_customers.difference(visit_counts))
+    extra = sorted(set(visit_counts).difference(expected_customers))
+
+    if duplicates:
+        raise ValueError(f"Customers visited more than once: {duplicates}")
+    if missing or extra:
+        raise ValueError(f"Invalid customer coverage. Missing={missing}, extra={extra}")
+
+    for index, route in enumerate(routes, start=1):
+        if not route.customers:
+            raise ValueError(f"Route {index} must include at least one customer.")
+        if route.load > vehicle_capacity + DISTANCE_TOLERANCE:
+            raise ValueError(f"Route {index} exceeds vehicle capacity: {route.load}")
+        if route.duration > max_duration + DISTANCE_TOLERANCE:
+            raise ValueError(f"Route {index} exceeds max duration: {route.duration}")
+        if route.distance < 0:
+            raise ValueError(f"Route {index} has negative distance: {route.distance}")
+
+        explicit_path = [DEPOT_NAME] + route.customers + [DEPOT_NAME]
+        explicit_distance = sum(
+            float(distances.loc[explicit_path[i], explicit_path[i + 1]])
+            for i in range(len(explicit_path) - 1)
+        )
+        if abs(route.distance - explicit_distance) > DISTANCE_TOLERANCE:
+            raise ValueError(
+                f"Route {index} distance mismatch: "
+                f"stored={route.distance}, explicit={explicit_distance}"
+            )
+
+        expected_cost = fixed_cost + explicit_distance * transport_cost
+        if abs(route.cost - expected_cost) > DISTANCE_TOLERANCE:
+            raise ValueError(
+                f"Route {index} cost mismatch: stored={route.cost}, expected={expected_cost}"
+            )
+
+
 def print_summary(routes: list[Route]) -> None:
     total_distance = sum(route.distance for route in routes)
     total_cost = sum(route.cost for route in routes)
@@ -209,6 +266,15 @@ def main() -> None:
         max_duration=args.max_duration,
         speed=args.speed,
         service_hours=args.service_hours,
+        fixed_cost=args.fixed_cost,
+        transport_cost=args.transport_cost,
+    )
+    validate_routes(
+        routes=routes,
+        customers=customers,
+        distances=distances,
+        vehicle_capacity=args.vehicle_capacity,
+        max_duration=args.max_duration,
         fixed_cost=args.fixed_cost,
         transport_cost=args.transport_cost,
     )
