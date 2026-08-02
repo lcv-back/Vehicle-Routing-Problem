@@ -69,7 +69,7 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-Run the local baseline:
+Run the local nearest-neighbor baseline:
 
 ```bash
 python run_vrp.py
@@ -90,26 +90,65 @@ Default values are aligned with the notebook experiment:
 - fixed cost: `1000000`
 - transport cost: `4492`
 
+Run the actual ACO solver (algorithm parameters come from
+`config/aco_config.json`):
+
+```bash
+python run_aco.py
+```
+
+Useful options:
+
+```bash
+python run_aco.py --number-of-ants 20 --number-of-loops 50 --no-export
+```
+
+`run_aco.py` prints a greedy-baseline vs. ACO comparison and, unless
+`--no-export` is given, writes `aco_route_summary.csv` and `aco_history.csv`
+to the configured output directory (`results/` by default).
+
+## Tests
+
+The `vrp` package (config loading, data loading, route utilities, route
+construction, and the ACO loop) has a pytest suite that runs against a small
+synthetic fixture, independent of the project spreadsheets:
+
+```bash
+python -m pytest tests/
+```
+
 ## Results
 
-Current local baseline result:
+Current local baseline result (`run_vrp.py`, nearest-neighbor):
 
 - number of routes: `30`
 - total distance: `11,209.79 km`
 - total cost: `80,354,377`
 
-These numbers are produced by the nearest-neighbor baseline, not the final ACO
-optimizer. They provide a stable reference result for future comparison.
+Current local ACO result (`run_aco.py`, default `config/aco_config.json`):
+
+- number of routes: `28`
+- total distance: `9,775.28 km`
+- total cost: `71,910,558`
+- improvement vs. greedy baseline: `10.51%`
+
+These are local reference results, not a claim of optimality; ACO results
+also depend on `random_seed` in `config/aco_config.json`.
 
 ## Improvement Roadmap
 
-1. Move core ACO logic from notebooks into Python modules.
+1. ~~Move core ACO logic from notebooks into Python modules.~~ Done: see the
+   `vrp` package.
 2. Use the precomputed distance matrix everywhere instead of repeated lookup
    logic.
-3. Add validation that each customer is visited exactly once.
-4. Add route constraint checks for capacity and duration.
-5. Compare greedy baseline, nearest-neighbor baseline, and ACO results.
+3. ~~Add validation that each customer is visited exactly once.~~ Done: see
+   `vrp.routes.validate_routes`.
+4. ~~Add route constraint checks for capacity and duration.~~ Done: see
+   `vrp.routes.validate_routes`.
+5. ~~Compare greedy baseline, nearest-neighbor baseline, and ACO results.~~
+   Done: see `run_aco.py` and the optimized notebook's comparison section.
 6. Add runtime benchmarking and convergence charts.
-7. Export final route summaries to CSV or Excel.
+7. ~~Export final route summaries to CSV or Excel.~~ Done: see `run_aco.py`
+   and the optimized notebook's export section.
 8. Clean and modularize the optimized notebook so it matches the full original
    workflow.
