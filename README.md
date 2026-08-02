@@ -107,6 +107,17 @@ python run_aco.py --number-of-ants 20 --number-of-loops 50 --no-export
 `--no-export` is given, writes `aco_route_summary.csv` and `aco_history.csv`
 to the configured output directory (`results/` by default).
 
+Compare ACO parameter presets (runtime and solution quality) and generate a
+convergence chart:
+
+```bash
+python benchmark_aco.py
+python benchmark_aco.py --presets "10x20,20x50,30x80"
+```
+
+This writes `benchmark_summary.csv` and `benchmark_convergence.png` to the
+configured output directory.
+
 ## Tests
 
 The `vrp` package (config loading, data loading, route utilities, route
@@ -147,7 +158,8 @@ also depend on `random_seed` in `config/aco_config.json`.
    `vrp.routes.validate_routes`.
 5. ~~Compare greedy baseline, nearest-neighbor baseline, and ACO results.~~
    Done: see `run_aco.py` and the optimized notebook's comparison section.
-6. Add runtime benchmarking and convergence charts.
+6. ~~Add runtime benchmarking and convergence charts.~~ Done: see
+   `benchmark_aco.py`.
 7. ~~Export final route summaries to CSV or Excel.~~ Done: see `run_aco.py`
    and the optimized notebook's export section.
 8. Clean and modularize the optimized notebook so it matches the full original
