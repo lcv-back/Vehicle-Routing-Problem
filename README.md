@@ -103,9 +103,10 @@ Useful options:
 python run_aco.py --number-of-ants 20 --number-of-loops 50 --no-export
 ```
 
-`run_aco.py` prints a greedy-baseline vs. ACO comparison and, unless
-`--no-export` is given, writes `aco_route_summary.csv` and `aco_history.csv`
-to the configured output directory (`results/` by default).
+`run_aco.py` prints a comparison across three methods -- nearest-neighbor
+greedy, Clarke-Wright savings, and ACO -- and, unless `--no-export` is given,
+writes `aco_route_summary.csv` and `aco_history.csv` to the configured
+output directory (`results/` by default).
 
 Compare ACO parameter presets (runtime and solution quality) and generate a
 convergence chart:
@@ -136,15 +137,26 @@ Current local baseline result (`run_vrp.py`, nearest-neighbor):
 - total distance: `11,209.79 km`
 - total cost: `80,354,377`
 
+Current local savings-heuristic result (`run_aco.py`, Clarke-Wright, deterministic):
+
+- number of routes: `30`
+- total distance: `9,456.95 km`
+- total cost: `72,480,619`
+
 Current local ACO result (`run_aco.py`, default `config/aco_config.json`):
 
 - number of routes: `28`
 - total distance: `9,775.28 km`
 - total cost: `71,910,558`
 - improvement vs. greedy baseline: `10.51%`
+- improvement vs. the stronger savings baseline: `0.79%`
 
-These are local reference results, not a claim of optimality; ACO results
-also depend on `random_seed` in `config/aco_config.json`.
+The savings baseline is a meaningfully better comparison point than
+nearest-neighbor: most of the gap ACO closes vs. greedy is actually gap that
+Clarke-Wright savings closes for free, without any randomness. ACO's real
+edge on this dataset is closer to 1% than the ~10% figure vs. greedy alone
+would suggest. These are local reference results, not a claim of optimality;
+ACO results also depend on `random_seed` in `config/aco_config.json`.
 
 ## Improvement Roadmap
 
@@ -157,7 +169,8 @@ also depend on `random_seed` in `config/aco_config.json`.
 4. ~~Add route constraint checks for capacity and duration.~~ Done: see
    `vrp.routes.validate_routes`.
 5. ~~Compare greedy baseline, nearest-neighbor baseline, and ACO results.~~
-   Done: see `run_aco.py` and the optimized notebook's comparison section.
+   Done: see `run_aco.py`, `vrp.construction.build_savings_routes` (Clarke-
+   Wright), and the optimized notebook's comparison section.
 6. ~~Add runtime benchmarking and convergence charts.~~ Done: see
    `benchmark_aco.py`.
 7. ~~Export final route summaries to CSV or Excel.~~ Done: see `run_aco.py`

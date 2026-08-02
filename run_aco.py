@@ -14,7 +14,7 @@ from time import perf_counter
 
 from vrp.aco import run_aco
 from vrp.config import load_config
-from vrp.construction import build_ant_routes_optimized, build_greedy_routes
+from vrp.construction import build_ant_routes_optimized, build_greedy_routes, build_savings_routes
 from vrp.data import load_inputs
 from vrp.routes import routes_total_cost, routes_total_distance, summarize_routes
 
@@ -46,7 +46,8 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def print_summary(name: str, routes, distance_matrix, config, runtime: float) -> None:
+def print_summary(name: str, routes, distance_matrix, config, runtime: float) -> float:
+    """Print the route summary for one method and return its total cost."""
     total_distance = routes_total_distance(routes, distance_matrix)
     total_cost = routes_total_cost(routes, distance_matrix, config["fixed_cost"], config["transport_cost"])
     print(f"[{name}]")
@@ -55,6 +56,7 @@ def print_summary(name: str, routes, distance_matrix, config, runtime: float) ->
     print(f"  Total cost: {total_cost:,.0f}")
     print(f"  Runtime: {runtime:.2f}s")
     print()
+    return total_cost
 
 
 def main() -> None:
@@ -70,7 +72,14 @@ def main() -> None:
     start = perf_counter()
     greedy_routes = build_greedy_routes(instance.distance_matrix, instance.demands, config)
     greedy_runtime = perf_counter() - start
-    print_summary("greedy_baseline", greedy_routes, instance.distance_matrix, config, greedy_runtime)
+    greedy_cost = print_summary("greedy_baseline", greedy_routes, instance.distance_matrix, config, greedy_runtime)
+
+    start = perf_counter()
+    savings_routes = build_savings_routes(instance.distance_matrix, instance.demands, config)
+    savings_runtime = perf_counter() - start
+    savings_cost = print_summary(
+        "savings_baseline", savings_routes, instance.distance_matrix, config, savings_runtime
+    )
 
     start = perf_counter()
     aco_routes, history = run_aco(
@@ -81,14 +90,12 @@ def main() -> None:
         config,
     )
     aco_runtime = perf_counter() - start
-    print_summary("aco", aco_routes, instance.distance_matrix, config, aco_runtime)
+    aco_cost = print_summary("aco", aco_routes, instance.distance_matrix, config, aco_runtime)
 
-    greedy_cost = routes_total_cost(
-        greedy_routes, instance.distance_matrix, config["fixed_cost"], config["transport_cost"]
-    )
-    aco_cost = routes_total_cost(aco_routes, instance.distance_matrix, config["fixed_cost"], config["transport_cost"])
-    improvement = ((greedy_cost - aco_cost) / greedy_cost) * 100 if greedy_cost else 0.0
-    print(f"ACO improvement vs greedy baseline: {improvement:.2f}%")
+    best_baseline_name = "savings_baseline" if savings_cost <= greedy_cost else "greedy_baseline"
+    best_baseline_cost = min(greedy_cost, savings_cost)
+    improvement = ((best_baseline_cost - aco_cost) / best_baseline_cost) * 100 if best_baseline_cost else 0.0
+    print(f"ACO improvement vs best baseline ({best_baseline_name}): {improvement:.2f}%")
 
     if not args.no_export:
         output_dir = Path(config["output_dir"])
