@@ -7,7 +7,67 @@ import random
 import numpy as np
 import pandas as pd
 
-from vrp.routes import validate_routes
+from vrp.routes import route_duration, validate_routes
+
+DISTANCE_TOLERANCE = 1e-9
+
+
+def build_savings_routes(distance_matrix: np.ndarray, demands: np.ndarray, config: dict) -> list[list[int]]:
+    """Construct routes with the Clarke-Wright parallel savings heuristic.
+
+    Starts with one route per customer, then repeatedly merges the pair of
+    routes with the highest "savings" (the distance saved by visiting both
+    customers on one route instead of two separate depot round trips),
+    as long as the merge keeps both endpoints adjacent to the depot and
+    respects capacity/duration constraints. This is a stronger baseline
+    than nearest-neighbor because it reasons about pairs of customers
+    instead of only the single nearest one.
+    """
+    customer_count = len(demands) - 1
+    if customer_count == 0:
+        raise ValueError("No customers to route.")
+
+    routes: dict[int, list[int]] = {customer: [0, customer, 0] for customer in range(1, customer_count + 1)}
+    route_id_of = {customer: customer for customer in range(1, customer_count + 1)}
+
+    savings = []
+    for i in range(1, customer_count + 1):
+        for j in range(i + 1, customer_count + 1):
+            saving = distance_matrix[0, i] + distance_matrix[0, j] - distance_matrix[i, j]
+            if saving > 0:
+                savings.append((saving, i, j))
+    savings.sort(key=lambda item: item[0], reverse=True)
+
+    for _, i, j in savings:
+        route_i_id = route_id_of[i]
+        route_j_id = route_id_of[j]
+        if route_i_id == route_j_id:
+            continue
+
+        route_i = routes[route_i_id]
+        route_j = routes[route_j_id]
+
+        i_is_tail = route_i[-2] == i
+        j_is_head = route_j[1] == j
+        if not (i_is_tail and j_is_head):
+            continue
+
+        merged = route_i[:-1] + route_j[1:]
+        merged_load = float(demands[merged[1:-1]].sum())
+        if merged_load > config["vehicle_capacity"] + DISTANCE_TOLERANCE:
+            continue
+        merged_duration = route_duration(merged, distance_matrix, config["speed"], config["service_hours"])
+        if merged_duration > config["max_duration"] + DISTANCE_TOLERANCE:
+            continue
+
+        routes[route_i_id] = merged
+        del routes[route_j_id]
+        for customer in merged[1:-1]:
+            route_id_of[customer] = route_i_id
+
+    final_routes = list(routes.values())
+    validate_routes(final_routes, customer_count, distance_matrix, demands, config)
+    return final_routes
 
 
 def build_greedy_routes(distance_matrix: np.ndarray, demands: np.ndarray, config: dict) -> list[list[int]]:

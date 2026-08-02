@@ -12,6 +12,7 @@ from vrp.construction import (
     build_ant_routes_optimized,
     build_ant_routes_original,
     build_greedy_routes,
+    build_savings_routes,
 )
 from vrp.aco import run_aco, update_pheromone
 
@@ -26,6 +27,7 @@ __all__ = [
     "build_ant_routes_optimized",
     "build_ant_routes_original",
     "build_greedy_routes",
+    "build_savings_routes",
     "run_aco",
     "update_pheromone",
 ]
